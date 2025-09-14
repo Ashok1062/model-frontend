@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CustomerPop from './CustomerPop';
 import axios from 'axios';
@@ -7,6 +7,7 @@ import { jwtDecode } from 'jwt-decode';
 
 function Home() {
   const [showModal, setShowModal] = useState(false);
+  const [editData, setEditData] = useState(null); // <-- store customer being edited
   const [username, setUsername] = useState("");
   const [customer, setCustomer] = useState([]);
   const navigate = useNavigate();
@@ -19,36 +20,46 @@ function Home() {
   const fetchCustomer = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get(`${baseUrl}/customer`,{
-        headers:{
-      Authorization:`Bearer ${token}`
-    }
+      const res = await axios.get(`${baseUrl}/customer`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       setCustomer(res.data);
-      console.log(setCustomer);
-      
     } catch (err) {
       console.error(err);
     }
   }
 
+  const handleDelete = async (id) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`${baseUrl}/customer/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchCustomer(); // refresh after delete
+    } catch (err) {
+      console.error("Delete failed", err);
+    }
+  };
+
+  const handleEdit = (data) => {
+    setEditData(data);
+    setShowModal(true);
+  };
+
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if(!token){
+    if (!token) {
       navigate("/");
       return;
     }
-    try{
+    try {
       const decoded = jwtDecode(token);
-      console.log(decoded);
       setUsername(decoded.username);
-
-    }catch(err){
-      console.log(err)
+    } catch (err) {
+      console.log(err);
     }
     fetchCustomer();
   }, [navigate]);
- 
 
   return (
     <div>
@@ -62,20 +73,19 @@ function Home() {
       </nav>
 
       <div className='flex flex-col justify-center items-center h-[500px]'>
-        <h1 className='text-3xl font-bold'>Welcome, You're logged in 
-             {username}
-        </h1>
+        <h1 className='text-3xl font-bold'>Welcome, You're logged in {username}</h1>
         <button 
           className='border font-semibold bg-blue-400 text-white px-3 py-1 rounded-xl mt-4' 
-          onClick={() => setShowModal(true)}>
+          onClick={() => { setEditData(null); setShowModal(true); }}>
           + Create Customer
         </button>
         <CustomerPop 
           isVisible={showModal} 
           onClose={() => {
             setShowModal(false);
-            fetchCustomer(); // refresh customer list after closing form
-          }} 
+            fetchCustomer(); 
+          }}
+          editData={editData} // <-- pass editData
         />
       </div>
 
@@ -88,6 +98,18 @@ function Home() {
               <p>{data.phone}</p>
               <p>{data.address}</p>
               <p className='text-sm text-gray-600'>Assigned: {data.assignedTo}</p>
+              <div className='flex gap-2'>
+                <button 
+                  className='bg-yellow-600 rounded-xl mt-4 font-bold text-white px-3 py-1'
+                  onClick={() => handleEdit(data)}>
+                  Edit
+                </button>
+                <button 
+                  className='bg-red-600 rounded-xl mt-4 font-bold text-white px-3 py-1'
+                  onClick={() => handleDelete(data._id)}>
+                  Delete
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -96,4 +118,4 @@ function Home() {
   )
 }
 
-export default Home
+export default Home;
